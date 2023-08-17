@@ -1,0 +1,12 @@
+os
+requests
+flask
+dotenv
+flask_cors
+json
+openai
+markdown
+tqdm
+base64
+datetime
+time
