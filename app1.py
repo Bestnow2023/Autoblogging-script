@@ -131,7 +131,7 @@ def get_auth_token(username, password, wordpress_url):
         return None
     
 # main function that start from here
-@app.route('/generate_post', methods=['POST'])
+@app.route('/', methods=['POST'])
 def generate_post():
     try:
         # get the data from the post data
@@ -142,6 +142,7 @@ def generate_post():
         #     "url" : "wordpress_site_url",
         #     "content" : "prompt_for_the_blog"
         # }
+        print("calculating")
         data = request.get_json()
         username = data['username']
         password = data['password']
