@@ -62,8 +62,9 @@ def generateStableDiffusionImage(prompt, height, width, steps, username, passwor
             with open(f"{datetime.datetime.now().timestamp()}.png", "wb") as f:
                 f.write(base64.b64decode(image["base64"]))
                 print("Image generated.")
+                filename=f.name
         # Prepare the headers for the REST API request
-            # with open(filename, 'rb') as img:
+            with open(filename, 'rb') as img:
                 headers = {
                     'Content-Disposition': f'attachment; filename={os.path.basename(filename)}',
                     'Content-Type': 'image/png',  # Adjust this if your images are not PNGs
@@ -71,7 +72,7 @@ def generateStableDiffusionImage(prompt, height, width, steps, username, passwor
                 }
 
                 # Send the POST request to the WordPress REST API
-                response = requests.post(f'{wp_url}/wp-json/wp/v2/media', headers=headers, data=f)
+                response = requests.post(f'{wp_url}/wp-json/wp/v2/media', headers=headers, data=img)
                 files.append(filename)
                 
                 if response.status_code == 201:
