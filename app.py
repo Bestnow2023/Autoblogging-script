@@ -57,10 +57,11 @@ def generateStableDiffusionImage(prompt, height, width, steps, username, passwor
     #Processing the response
     if response.status_code == 200:
         data = response.json()
-        filename = f'./{datetime.datetime.now().timestamp()}.png'
+        filename = f'{datetime.datetime.now().timestamp()}.png'
         for i, image in enumerate(data["artifacts"]):
             with open(f"{datetime.datetime.now().timestamp()}.png", "wb") as f:
                 f.write(base64.b64decode(image["base64"]))
+                print("Image generated.")
         # Prepare the headers for the REST API request
         with open(filename, 'rb') as img:
             headers = {
@@ -221,10 +222,6 @@ def generate_post():
                 print(f"Error deleting file '{filename}': {e}")
         return jsonify({'success' : 'Your blog is posted successfully!'})
     
-        file_path = "my_html_file.html"
-        with open(file_path, "w") as f:
-            f.write(html_content)
-        return 'success'
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
