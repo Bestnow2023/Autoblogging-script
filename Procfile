@@ -1,1 +1,1 @@
-web: waitress-serve --call app:app
+gunicorn -c gunicorn_config.py your_app:app
