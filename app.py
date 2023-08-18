@@ -37,6 +37,7 @@ height = 512
 width = 768
 steps = 50
 files = []
+count = 0
 # image generation and upload it to wordpress site. return uploaded image url
 def generateStableDiffusionImage(prompt, height, width, steps, username, password, wp_url, code):
     url = f"{api_host}/v1/generation/{engine_id}/text-to-image"
@@ -151,6 +152,8 @@ def generate_post():
         #     "url" : "wordpress_site_url",
         #     "content" : "prompt_for_the_blog"
         # }
+        count = 0
+        counter = 0
         data = request.get_json()
         username = data['username']
         password = data['password']
@@ -158,12 +161,18 @@ def generate_post():
         # prepare for the prompt
         prompt = "write the outline of a blog post about "
         prompt += data['content']
-        prompt += ". This should be like a authoritative comprehensive guide. Should include a FAQ and Conclusion at the end. The FAQ section should have each question as H3 tags.  And give me the output as a JSON block with nested H2 and H3 tags indicating the sub-sections. No further explanation is required.  Your response contain ONLY the JSON block and nothing else. "
+        prompt += ". This should be like a authoritative comprehensive guide. Should include a FAQ and Conclusion at the end. And give me the output as a JSON block with nested H2 and H3 tags indicating the sub-sections. No further explanation is required.  Your response contain ONLY the JSON block and nothing else. "
 
         # generate the outline of the blog and sort it.
         print("Thinking...")
         content = generate_content(prompt)
         json_content = json.loads(content)
+        count += len(json_content["H2"]) * 2
+        for mmk in json_content["H2"]:
+            if mmk["title"] != "FAQ":
+                count += len(mmk["H3"])
+        count += 6
+        # print(count)
         h2_with_h3 = []
         for h2_item in json_content["H2"]:
             h2_title = h2_item["title"]
@@ -171,48 +180,85 @@ def generate_post():
             h2_with_h3.append({"H2 Title": h2_title, "H3 Titles": h3_titles})
         title = json_content["H1"]      # title of the blog
         featuredimg = generateStableDiffusionImage(title, height, width, 30, username, password, wordpress_url, 1)
+        counter += 1
+        print(f'{int((counter / count) * 100)}% generated!')
         # generate the main content of the blog
         tmp = ""
-        for index, item in enumerate(tqdm(h2_with_h3, desc='Generating blog posts')):
+        for index, item in enumerate(h2_with_h3):
             tmp += f'## {index + 1}. {item["H2 Title"]}\n\n'        # the sub-title of the blog
             # generate the content for subtitle.
+            # print(f'--------------------------> debug1 {item}')
             if item["H2 Title"] != "FAQ":
                 tmpl = generate_content(f'In a blog post about {title} write an introduction for a H2 sub-section titled {item["H2 Title"]} in about 100 words.Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include a conclusion or explanation. Get straight to the point about {item["H2 Title"]}. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.')
+                
+                # print(f'----------------------------->debug1.5 {tmpl}')
+                counter += 1
+                print(f'{int((counter / count) * 100)}% generated!')
                 if tmpl != "I'm sorry, but I can't assist with that.":          # this is for the skip when "I am sorry, but I can't assist with that."
-                    json_tmpl = json.loads(tmpl)
-                    tmp += json_tmpl["H2_SUBHEADING"]
+                    if isinstance(tmpl, str):
+                        tmp += tmpl
+                    else:
+                        json_tmpl = json.loads(tmpl)
+                        tmp += json_tmpl["H2_SUBHEADING"]
                 tmp += "\n\n\n"
                 # prepare the prompt for image generation.
                 prompt_img = json_content["H1"]         # prompt for the image = title + sub-title
                 prompt_img += f' {item["H2 Title"]}'
+                # print(f"-----------------> for debug2 {prompt_img}")
                 # generate the image
                 image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2)     # The image url.
-
                 tmp += f'![Alt Text]({image_url})\n\n'      # add the image to the content.
+
+                counter += 1
+                print(f'{int((counter / count) * 100)}% generated!')
+
                 # generate the content for each sub-sub title
                 for subitem in item["H3 Titles"]:
                     if isinstance(subitem, str):
                         tmp += "\n###- " + subitem + "\n\n"
                         tmpl = generate_content(f' In a blog post about "{subitem}" I have a H2 sub-section {item["H2 Title"]}. please write a H3 sub-section "{subitem}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.')
+                        
+                        counter += 1
+                        print(f'{int((counter / count) * 100)}% generated!')
+
                     else:
                         tmp += "\n###- " + subitem["title"] + "\n\n"
                         tmpl = generate_content(f' In a blog post about "{subitem["title"]}" I have a H2 sub-section {item["H2 Title"]}. please write a H3 sub-section "{subitem["title"]}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.')
+                        
+                        counter += 1
+                        print(f'{int((counter / count) * 100)}% generated!')
+
                     if tmpl != "I'm sorry, but I can't assist with that.":          # this is for the skip when "I am sorry, but I can't assist with that."
                         tmp += tmpl
                     tmp += "\n\n"
             else:
+                prompt_img = f'FAQ in {title}'
+                # generate the image
+                image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2)     # The image url.
+                tmp += f'![Alt Text]({image_url})\n\n'      # add the image to the content.
+
+                counter += 1
+                print(f'{int((counter / count) * 100)}% generated!')
+
                 tmpl = generate_content(f'write 5 FAQ questions for a blog post about "{title}". The questions should be for a authoritative comprehensive guide. please give me the output as a JSON block with each question as a element in the JSON array. No further explanation is required. Your response contain ONLY the JSON block and nothing else.')
-                for subitem in tmpl:
-                    tmp += "\n###- " + subitem + "\n\n"
-                    tmpl = generate_content(f' Write the answer for this question "{subitem}".')
-                    if tmpl != "I'm sorry, but I can't assist with that.":          # this is for the skip when "I am sorry, but I can't assist with that."
-                        tmp += ""
+                
+                counter += 1
+                print(f'{int((counter / count) * 100)}% generated!')
+                json_tmpl = json.loads(tmpl)
+                # print(f'------------------------> debug FAQ{json_tmpl}')
+                for subitem in json_tmpl:
+                    tmp += "\n###- " + subitem["question"] + "\n\n"
+                    
+                    tmpl = generate_content(f' Write the answer for this question "{subitem["question"]} about {title}".')
+                    
+                    counter += 1
+                    print(f'{int((counter / count) * 100)}% generated!')
+
+                    if tmpl != "I'm sorry, but I can't provide the help you are looking for.":          # this is for the skip when "I am sorry, but I can't assist with that."
+                        tmp += tmpl
                     tmp += "\n\n"
                 tmp += "\n\n\n"
                 # prepare the prompt for image generation.
-                prompt_img = json_content["H1"]         # prompt for the image = title + sub-title
-                prompt_img += f' {item["H2 Title"]}'
-
 
         # make the html code from the generated blog
         html_content = markdown.markdown(tmp)
@@ -225,6 +271,8 @@ def generate_post():
         #for test write the html file
         # with open("index.html", "w") as htm:
         #     htm.write(html_content)
+        #     print('Your blog is posted successfully!')
+        #     return "DDDDD"
         # post it.
         post_to_wordpress(title, html_content, wordpress_url, featuredimg, username, password)
         for filename in files:
@@ -236,6 +284,7 @@ def generate_post():
         return jsonify({'success' : 'Your blog is posted successfully!'})
     
     except Exception as e:
+        print(str(e))
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
