@@ -1,0 +1,63 @@
+{
+    "H1": "The Comprehensive Guide to House Construction", 
+    "H2": [
+        {
+            "title": "Understanding the Basics of House Construction", 
+            "H3": 
+            [
+                "Choosing the Right Location", 
+                "Understanding Building Codes and Regulations", 
+                "Planning Your Budget"
+            ]
+        }, 
+        {
+            "title": "Designing Your Dream Home", 
+            "H3": 
+            [
+                "Working with an Architect", 
+                "Choosing a House Style", 
+                "Planning the Layout"
+            ]
+        }, 
+        {
+            "title": "The Construction Process", 
+            "H3": [
+                "Laying the Foundation", 
+                "Building the Frame", 
+                "Installing Plumbing and Electrical Systems", 
+                "Finishing the Interior and Exterior"
+            ]
+        }, 
+        {
+            "title": "Choosing the Right Materials", 
+            "H3": 
+            [
+                "Understanding Different Building Materials", 
+                "Choosing Energy-Efficient Materials", 
+                "Selecting Durable and Long-Lasting Materials"
+            ]
+        }, 
+        {
+            "title": "Hiring and Working with Contractors", 
+            "H3": 
+            [
+                "Finding a Reputable Contractor", 
+                "Understanding Contracts and Agreements", 
+                "Communicating Effectively with Your Contractor"
+            ]
+        }, 
+        {
+            "title": "FAQ", 
+            "H3": 
+            [
+                "What is the average cost of building a house?", 
+                "How long does it take to build a house?", 
+                "What are the most common problems encountered during house construction?"
+            ]
+        },
+        {
+            "title": "Conclusion", 
+            "H3": []
+        }
+    ]
+}

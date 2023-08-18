@@ -4,13 +4,12 @@ from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import openai
 import json
 import markdown
 from tqdm import tqdm
 import base64
 import datetime
-import time
+import os
 
 app = Flask(__name__)
 CORS(app)  
@@ -25,6 +24,7 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 api_host = 'https://api.stability.ai'
 api_key = os.getenv('DREAMSTUDIO_API_KEY')
 engine_id = 'stable-diffusion-xl-beta-v2-2-2'
+
 def getModelList():
     url = f"{api_host}/v1/engines/list"
     response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
@@ -35,9 +35,9 @@ def getModelList():
 height = 512
 width = 768
 steps = 50
-
+files = []
 # image generation and upload it to wordpress site. return uploaded image url
-def generateStableDiffusionImage(prompt, height, width, steps, username, password, wp_url):
+def generateStableDiffusionImage(prompt, height, width, steps, username, password, wp_url, code):
     url = f"{api_host}/v1/generation/{engine_id}/text-to-image"
     headers = {
     "Content-Type": "application/json",
@@ -71,13 +71,21 @@ def generateStableDiffusionImage(prompt, height, width, steps, username, passwor
 
             # Send the POST request to the WordPress REST API
             response = requests.post(f'{wp_url}/wp-json/wp/v2/media', headers=headers, data=img)
+            files.append(filename)
+            
             if response.status_code == 201:
                 image_id = response.json()['id']
-                print(image_id)
+                image_url = response.json()['link']
+                if(code == 1):
+                    print(image_id)
+                    return image_id
+                else:
+                    print(image_url)
+                    return image_url
             else:
                 print(f"Error uploading image: {response.content}")
+                exit("image upload failed")
 
-        return filename
 # main part for content and title generation.
 
 def generate_content(prompt):
@@ -101,11 +109,12 @@ def generate_content(prompt):
         return None
 
 # post the content to wordpress site.
-def post_to_wordpress(title, content, wordpress_url, username, password):
+def post_to_wordpress(title, content, wordpress_url, featuredimg, username, password):
     post_data = {
         'title': title,
         'content': content,
-        'status': 'publish'
+        'status': 'publish',
+        "featured_media": featuredimg
     }
     
     response = requests.post(f"{wordpress_url}/wp-json/wp/v2/posts", auth=(username, password), json=post_data)
@@ -114,6 +123,7 @@ def post_to_wordpress(title, content, wordpress_url, username, password):
         return True
     else:
         return False
+    
 def get_auth_token(username, password, wordpress_url):
     auth_data = {
         "username": username,
@@ -142,7 +152,6 @@ def generate_post():
         #     "url" : "wordpress_site_url",
         #     "content" : "prompt_for_the_blog"
         # }
-        print("calculating")
         data = request.get_json()
         username = data['username']
         password = data['password']
@@ -156,38 +165,39 @@ def generate_post():
         print("generating started!")
         content = generate_content(prompt)
         json_content = json.loads(content)
+        # print(json_content)
         h2_with_h3 = []
         for h2_item in json_content["H2"]:
             h2_title = h2_item["title"]
-            h3_titles = [h3["title"] for h3 in h2_item["H3"]]
+            h3_titles = [h3 for h3 in h2_item["H3"]]
             h2_with_h3.append({"H2 Title": h2_title, "H3 Titles": h3_titles})
-        
         title = json_content["H1"]      # title of the blog
-
+        featuredimg = generateStableDiffusionImage(title, height, width, 30, username, password, wordpress_url, 1)
         # generate the main content of the blog
         tmp = ""
         for index, item in enumerate(tqdm(h2_with_h3, desc='Generating blog posts')):
             tmp += f'## {index + 1}. {item["H2 Title"]}\n\n'        # the sub-title of the blog
-
             # generate the content for subtitle.
             tmpl = generate_content(f'write an introduction for a section titled \"{item["H2 Title"]}\" in about 100 words. ')
             if tmpl != "I'm sorry, but I can't assist with that.":          # this is for the skip when "I am sorry, but I can't assist with that."
                 tmp += tmpl
             tmp += "\n\n\n"
-            
             # prepare the prompt for image generation.
             prompt_img = json_content["H1"]         # prompt for the image = title + sub-title
             prompt_img += f' {item["H2 Title"]}'
 
             # generate the image
-            image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url)     # The image url.
+            image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2)     # The image url.
 
             tmp += f'![Alt Text]({image_url})\n\n'      # add the image to the content.
-            
             # generate the content for each sub-sub title
             for subitem in item["H3 Titles"]:
-                tmp += "\n###- " + subitem + "\n\n"
-                tmp += generate_content(f' I need to write a sub-section titled \"{subitem}\". Please write this sub-section in upto 200 words')
+                if isinstance(subitem, str):
+                    tmp += "\n###- " + subitem + "\n\n"
+                    tmpl = generate_content(f' I need to write a sub-section titled \"{subitem}\". Please write this sub-section in upto 200 words')
+                else:
+                    tmp += "\n###- " + subitem["title"] + "\n\n"
+                    tmp += generate_content(f' I need to write a sub-section titled \"{subitem["title"]}\". Please write this sub-section in upto 200 words')
                 if tmpl != "I'm sorry, but I can't assist with that.":          # this is for the skip when "I am sorry, but I can't assist with that."
                     tmp += tmpl
                 tmp += "\n\n"
@@ -199,10 +209,16 @@ def generate_post():
         tmpdata = {
             "content": html_content
         }
-        json_data = json.dumps(tmpdata, indent=4)
+        json_data = json.dumps(tmpdata['content'], indent=4)
 
         # post it.
-        post_to_wordpress(title, json_data, wordpress_url, username, password)
+        post_to_wordpress(title, html_content, wordpress_url, featuredimg, username, password)
+        for filename in files:
+            try:
+                os.remove(filename)
+                print(f"File '{filename}' deleted successfully.")
+            except OSError as e:
+                print(f"Error deleting file '{filename}': {e}")
         return jsonify({'success' : 'Your blog is posted successfully!'})
     
         file_path = "my_html_file.html"
@@ -213,4 +229,4 @@ def generate_post():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0')
