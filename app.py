@@ -25,13 +25,14 @@ api_host = 'https://api.stability.ai'
 api_key = os.getenv('DREAMSTUDIO_API_KEY')
 engine_id = 'stable-diffusion-xl-beta-v2-2-2'
 
-def getModelList():
-    url = f"{api_host}/v1/engines/list"
-    response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
+# def getModelList():
+    # url = f"{api_host}/v1/engines/list"
+    # response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
 
-    if response.status_code == 200:
-        payload = response.json()
-        print(payload)
+    # if response.status_code == 200:
+    #     payload = response.json()
+        # print(payload)
+
 height = 512
 width = 768
 steps = 50
@@ -61,8 +62,9 @@ def generateStableDiffusionImage(prompt, height, width, steps, username, passwor
         for i, image in enumerate(data["artifacts"]):
             with open(f"{datetime.datetime.now().timestamp()}.png", "wb") as f:
                 f.write(base64.b64decode(image["base64"]))
-                print("Image generated.")
                 filename=f.name
+                #for test
+                # return filename
         # Prepare the headers for the REST API request
             with open(filename, 'rb') as img:
                 headers = {
@@ -79,10 +81,8 @@ def generateStableDiffusionImage(prompt, height, width, steps, username, passwor
                     image_id = response.json()['id']
                     image_url = response.json()['link']
                     if(code == 1):
-                        print(image_id)
                         return image_id
                     else:
-                        print(image_url)
                         return image_url
                 else:
                     print(f"Error uploading image: {response.content}")
@@ -96,16 +96,13 @@ def generate_content(prompt):
         'Authorization': f'Bearer {CUSTOMGPT_API_KEY}',
         'Content-Type': 'application/json'
     }
-    # print(headers)
     data = {
         'prompt': prompt
     }
 
     response = requests.post(CUSTOMGPT_API_URL, headers=headers, json=data)
-    # print(response.text)
     if response.status_code == 200:
         content = response.json()['data']['openai_response']
-        # print(content)
         return content
     else:
         return None
@@ -161,13 +158,12 @@ def generate_post():
         # prepare for the prompt
         prompt = "write the outline of a blog post about "
         prompt += data['content']
-        prompt += ". This should be like a authoritative comprehensive guide. The title should nested H1 Should include a FAQ and Conclusion at the end. And give me the output as a JSON block with nested H2 and H3 tags indicating the sub-sections. No further explanation is required. Your response contain ONLY the JSON block and nothing else. "
+        prompt += ". This should be like a authoritative comprehensive guide. Should include a FAQ and Conclusion at the end. The FAQ section should have each question as H3 tags.  And give me the output as a JSON block with nested H2 and H3 tags indicating the sub-sections. No further explanation is required.  Your response contain ONLY the JSON block and nothing else. "
 
         # generate the outline of the blog and sort it.
-        print("generating started!")
+        print("Thinking...")
         content = generate_content(prompt)
         json_content = json.loads(content)
-        # print(json_content)
         h2_with_h3 = []
         for h2_item in json_content["H2"]:
             h2_title = h2_item["title"]
@@ -180,29 +176,44 @@ def generate_post():
         for index, item in enumerate(tqdm(h2_with_h3, desc='Generating blog posts')):
             tmp += f'## {index + 1}. {item["H2 Title"]}\n\n'        # the sub-title of the blog
             # generate the content for subtitle.
-            tmpl = generate_content(f'write an introduction for a section titled \"{item["H2 Title"]}\" in about 100 words. ')
-            if tmpl != "I'm sorry, but I can't assist with that.":          # this is for the skip when "I am sorry, but I can't assist with that."
-                tmp += tmpl
-            tmp += "\n\n\n"
-            # prepare the prompt for image generation.
-            prompt_img = json_content["H1"]         # prompt for the image = title + sub-title
-            prompt_img += f' {item["H2 Title"]}'
-
-            # generate the image
-            image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2)     # The image url.
-
-            tmp += f'![Alt Text]({image_url})\n\n'      # add the image to the content.
-            # generate the content for each sub-sub title
-            for subitem in item["H3 Titles"]:
-                if isinstance(subitem, str):
-                    tmp += "\n###- " + subitem + "\n\n"
-                    tmpl = generate_content(f' I need to write a sub-section titled \"{subitem}\". Please write this sub-section in upto 200 words')
-                else:
-                    tmp += "\n###- " + subitem["title"] + "\n\n"
-                    tmp += generate_content(f' I need to write a sub-section titled \"{subitem["title"]}\". Please write this sub-section in upto 200 words')
+            if item["H2 Title"] != "FAQ":
+                tmpl = generate_content(f'In a blog post about {title} write an introduction for a H2 sub-section titled {item["H2 Title"]} in about 100 words.Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include a conclusion or explanation. Get straight to the point about {item["H2 Title"]}. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.')
                 if tmpl != "I'm sorry, but I can't assist with that.":          # this is for the skip when "I am sorry, but I can't assist with that."
-                    tmp += tmpl
-                tmp += "\n\n"
+                    json_tmpl = json.loads(tmpl)
+                    tmp += json_tmpl["H2_SUBHEADING"]
+                tmp += "\n\n\n"
+                # prepare the prompt for image generation.
+                prompt_img = json_content["H1"]         # prompt for the image = title + sub-title
+                prompt_img += f' {item["H2 Title"]}'
+                # generate the image
+                image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2)     # The image url.
+
+                tmp += f'![Alt Text]({image_url})\n\n'      # add the image to the content.
+                # generate the content for each sub-sub title
+                for subitem in item["H3 Titles"]:
+                    if isinstance(subitem, str):
+                        tmp += "\n###- " + subitem + "\n\n"
+                        tmpl = generate_content(f' In a blog post about "{subitem}" I have a H2 sub-section {item["H2 Title"]}. please write a H3 sub-section "{subitem}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.')
+                    else:
+                        tmp += "\n###- " + subitem["title"] + "\n\n"
+                        tmpl = generate_content(f' In a blog post about "{subitem["title"]}" I have a H2 sub-section {item["H2 Title"]}. please write a H3 sub-section "{subitem["title"]}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.')
+                    if tmpl != "I'm sorry, but I can't assist with that.":          # this is for the skip when "I am sorry, but I can't assist with that."
+                        tmp += tmpl
+                    tmp += "\n\n"
+            else:
+                tmpl = generate_content(f'write 5 FAQ questions for a blog post about "{title}". The questions should be for a authoritative comprehensive guide. please give me the output as a JSON block with each question as a element in the JSON array. No further explanation is required. Your response contain ONLY the JSON block and nothing else.')
+                json_tmpl = json.loads(tmpl)
+                for subitem in json_tmpl:
+                    tmp += "\n###- " + subitem + "\n\n"
+                    tmpl = generate_content(f' Write the answer for this question "{subitem}".')
+                    if tmpl != "I'm sorry, but I can't assist with that.":          # this is for the skip when "I am sorry, but I can't assist with that."
+                        tmp += ""
+                    tmp += "\n\n"
+                tmp += "\n\n\n"
+                # prepare the prompt for image generation.
+                prompt_img = json_content["H1"]         # prompt for the image = title + sub-title
+                prompt_img += f' {item["H2 Title"]}'
+
 
         # make the html code from the generated blog
         html_content = markdown.markdown(tmp)
@@ -212,15 +223,17 @@ def generate_post():
             "content": html_content
         }
         json_data = json.dumps(tmpdata['content'], indent=4)
-
+        #for test write the html file
+        # with open("index.html", "w") as htm:
+        #     htm.write(html_content)
         # post it.
         post_to_wordpress(title, html_content, wordpress_url, featuredimg, username, password)
         for filename in files:
             try:
                 os.remove(filename)
-                print(f"File '{filename}' deleted successfully.")
             except OSError as e:
                 print(f"Error deleting file '{filename}': {e}")
+        print('Your blog is posted successfully!')
         return jsonify({'success' : 'Your blog is posted successfully!'})
     
     except Exception as e:
