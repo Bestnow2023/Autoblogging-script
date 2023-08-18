@@ -1,2 +1,2 @@
-web: python app.py --log-file -
+web: waitress-serve --port=$PORT app:app
 worker: python app.py
