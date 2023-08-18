@@ -9,6 +9,7 @@ import markdown
 from tqdm import tqdm
 import base64
 import datetime
+from waitress import serve
 
 app = Flask(__name__)
 CORS(app)  
@@ -229,4 +230,5 @@ def generate_post():
 
 if __name__ == '__main__':
     print("App started")
-    app.run()
+    serve(app, host="0.0.0.0", port=8080)
+    # app.run()
