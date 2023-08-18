@@ -63,29 +63,29 @@ def generateStableDiffusionImage(prompt, height, width, steps, username, passwor
                 f.write(base64.b64decode(image["base64"]))
                 print("Image generated.")
         # Prepare the headers for the REST API request
-        with open(filename, 'rb') as img:
-            headers = {
-                'Content-Disposition': f'attachment; filename={os.path.basename(filename)}',
-                'Content-Type': 'image/png',  # Adjust this if your images are not PNGs
-                'Authorization': 'Basic ' + base64.b64encode(f'{username}:{password}'.encode('utf-8')).decode('utf-8')
-            }
+            with open(filename, 'rb') as img:
+                headers = {
+                    'Content-Disposition': f'attachment; filename={os.path.basename(filename)}',
+                    'Content-Type': 'image/png',  # Adjust this if your images are not PNGs
+                    'Authorization': 'Basic ' + base64.b64encode(f'{username}:{password}'.encode('utf-8')).decode('utf-8')
+                }
 
-            # Send the POST request to the WordPress REST API
-            response = requests.post(f'{wp_url}/wp-json/wp/v2/media', headers=headers, data=img)
-            files.append(filename)
-            
-            if response.status_code == 201:
-                image_id = response.json()['id']
-                image_url = response.json()['link']
-                if(code == 1):
-                    print(image_id)
-                    return image_id
+                # Send the POST request to the WordPress REST API
+                response = requests.post(f'{wp_url}/wp-json/wp/v2/media', headers=headers, data=img)
+                files.append(filename)
+                
+                if response.status_code == 201:
+                    image_id = response.json()['id']
+                    image_url = response.json()['link']
+                    if(code == 1):
+                        print(image_id)
+                        return image_id
+                    else:
+                        print(image_url)
+                        return image_url
                 else:
-                    print(image_url)
-                    return image_url
-            else:
-                print(f"Error uploading image: {response.content}")
-                exit("image upload failed")
+                    print(f"Error uploading image: {response.content}")
+                    exit("image upload failed")
 
 # main part for content and title generation.
 
