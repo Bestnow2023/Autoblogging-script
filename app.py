@@ -202,8 +202,7 @@ def generate_post():
                     tmp += "\n\n"
             else:
                 tmpl = generate_content(f'write 5 FAQ questions for a blog post about "{title}". The questions should be for a authoritative comprehensive guide. please give me the output as a JSON block with each question as a element in the JSON array. No further explanation is required. Your response contain ONLY the JSON block and nothing else.')
-                json_tmpl = json.loads(tmpl)
-                for subitem in json_tmpl:
+                for subitem in tmpl:
                     tmp += "\n###- " + subitem + "\n\n"
                     tmpl = generate_content(f' Write the answer for this question "{subitem}".')
                     if tmpl != "I'm sorry, but I can't assist with that.":          # this is for the skip when "I am sorry, but I can't assist with that."
