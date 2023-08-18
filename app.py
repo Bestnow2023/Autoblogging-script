@@ -195,11 +195,13 @@ def generate_post():
                 counter += 1
                 print(f'{int((counter / count) * 100)}% generated!')
                 if tmpl != "I'm sorry, but I can't assist with that.":          # this is for the skip when "I am sorry, but I can't assist with that."
-                    if isinstance(tmpl, str):
-                        tmp += tmpl
-                    else:
+                    if "H2_SUBHEADING" in tmpl:
                         json_tmpl = json.loads(tmpl)
                         tmp += json_tmpl["H2_SUBHEADING"]
+                        print(f'tmpl is object --------- {json_tmpl["H2_SUBHEADING"]}')
+                    else:
+                        print("Tmpl is string")
+                        tmp += tmpl
                 tmp += "\n\n\n"
                 # prepare the prompt for image generation.
                 prompt_img = json_content["H1"]         # prompt for the image = title + sub-title
