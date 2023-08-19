@@ -16,13 +16,13 @@ CORS(app)
 
 # CustomGPT API configuration
 load_dotenv()
-CUSTOMGPT_API_KEY = os.getenv('CUSTOMGPT_API_KEY')
+# CUSTOMGPT_API_KEY = os.getenv('CUSTOMGPT_API_KEY')
 CUSTOMGPT_API_URL = os.getenv('CUSTOMGPT_API_URL')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+# OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 # stable diffusion configuration
 api_host = 'https://api.stability.ai'
-api_key = os.getenv('DREAMSTUDIO_API_KEY')
+# api_key = os.getenv('DREAMSTUDIO_API_KEY')
 engine_id = 'stable-diffusion-xl-beta-v2-2-2'
 
 # def getModelList():
@@ -39,12 +39,12 @@ steps = 50
 files = []
 count = 0
 # image generation and upload it to wordpress site. return uploaded image url
-def generateStableDiffusionImage(prompt, height, width, steps, username, password, wp_url, code):
+def generateStableDiffusionImage(prompt, height, width, steps, username, password, wp_url, code, dream_api_key):
     url = f"{api_host}/v1/generation/{engine_id}/text-to-image"
     headers = {
     "Content-Type": "application/json",
     "Accept": "application/json",
-    "Authorization": f"Bearer {api_key}"
+    "Authorization": f"Bearer {dream_api_key}"
     }
     payload = {}
     payload['text_prompts'] = [{"text": f"{prompt}"}]
@@ -91,10 +91,10 @@ def generateStableDiffusionImage(prompt, height, width, steps, username, passwor
 
 # main part for content and title generation.
 
-def generate_content(prompt):
+def generate_content(prompt, api_key):
     headers = {
         "accept": "application/json",
-        'Authorization': f'Bearer {CUSTOMGPT_API_KEY}',
+        'Authorization': f'Bearer {api_key}',
         'Content-Type': 'application/json'
     }
     data = {
@@ -158,6 +158,8 @@ def generate_post():
         username = data['username']
         password = data['password']
         wordpress_url = data['url']
+        dream_api_key = data['dreamstudio_api_key']
+        customgpt_api_key = data['customgpt_api_key']
         # prepare for the prompt
         prompt = "write the outline of a blog post about "
         prompt += data['content']
@@ -165,7 +167,7 @@ def generate_post():
 
         # generate the outline of the blog and sort it.
         print("Thinking...")
-        content = generate_content(prompt)
+        content = generate_content(prompt, customgpt_api_key)
         json_content = json.loads(content)
         count += len(json_content["H2"]) * 2
         for mmk in json_content["H2"]:
@@ -179,7 +181,7 @@ def generate_post():
             h3_titles = [h3 for h3 in h2_item["H3"]]
             h2_with_h3.append({"H2 Title": h2_title, "H3 Titles": h3_titles})
         title = json_content["H1"]      # title of the blog
-        featuredimg = generateStableDiffusionImage(title, height, width, 30, username, password, wordpress_url, 1)
+        featuredimg = generateStableDiffusionImage(title, height, width, 30, username, password, wordpress_url, 1, dream_api_key)
         counter += 1
         print(f'{int((counter / count) * 100)}% generated!')
         # generate the main content of the blog
@@ -189,7 +191,7 @@ def generate_post():
             # generate the content for subtitle.
             # print(f'--------------------------> debug1 {item}')
             if item["H2 Title"] != "FAQ":
-                tmpl = generate_content(f'In a blog post about {title} write an introduction for a H2 sub-section titled {item["H2 Title"]} in about 100 words.Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include a conclusion or explanation. Get straight to the point about {item["H2 Title"]}. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.')
+                tmpl = generate_content(f'In a blog post about {title} write an introduction for a H2 sub-section titled {item["H2 Title"]} in about 100 words.Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include a conclusion or explanation. Get straight to the point about {item["H2 Title"]}. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
                 
                 # print(f'----------------------------->debug1.5 {tmpl}')
                 counter += 1
@@ -208,7 +210,7 @@ def generate_post():
                 prompt_img += f' {item["H2 Title"]}'
                 # print(f"-----------------> for debug2 {prompt_img}")
                 # generate the image
-                image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2)     # The image url.
+                image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2, dream_api_key)     # The image url.
                 tmp += f'![Alt Text]({image_url})\n\n'      # add the image to the content.
 
                 counter += 1
@@ -218,14 +220,14 @@ def generate_post():
                 for subitem in item["H3 Titles"]:
                     if isinstance(subitem, str):
                         tmp += "\n###- " + subitem + "\n\n"
-                        tmpl = generate_content(f' In a blog post about "{subitem}" I have a H2 sub-section {item["H2 Title"]}. please write a H3 sub-section "{subitem}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.')
+                        tmpl = generate_content(f' In a blog post about "{subitem}" I have a H2 sub-section {item["H2 Title"]}. please write a H3 sub-section "{subitem}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
                         
                         counter += 1
                         print(f'{int((counter / count) * 100)}% generated!')
 
                     else:
                         tmp += "\n###- " + subitem["title"] + "\n\n"
-                        tmpl = generate_content(f' In a blog post about "{subitem["title"]}" I have a H2 sub-section {item["H2 Title"]}. please write a H3 sub-section "{subitem["title"]}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.')
+                        tmpl = generate_content(f' In a blog post about "{subitem["title"]}" I have a H2 sub-section {item["H2 Title"]}. please write a H3 sub-section "{subitem["title"]}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
                         
                         counter += 1
                         print(f'{int((counter / count) * 100)}% generated!')
@@ -236,13 +238,13 @@ def generate_post():
             else:
                 prompt_img = f'FAQ in {title}'
                 # generate the image
-                image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2)     # The image url.
+                image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2, dream_api_key)     # The image url.
                 tmp += f'![Alt Text]({image_url})\n\n'      # add the image to the content.
 
                 counter += 1
                 print(f'{int((counter / count) * 100)}% generated!')
 
-                tmpl = generate_content(f'write 5 FAQ questions for a blog post about "{title}". The questions should be for a authoritative comprehensive guide. please give me the output as a JSON block with each question as a element in the JSON array. No further explanation is required. Your response contain ONLY the JSON block and nothing else.')
+                tmpl = generate_content(f'write 5 FAQ questions for a blog post about "{title}". The questions should be for a authoritative comprehensive guide. please give me the output as a JSON block with each question as a element in the JSON array. No further explanation is required. Your response contain ONLY the JSON block and nothing else.', customgpt_api_key)
                 
                 counter += 1
                 print(f'{int((counter / count) * 100)}% generated!')
@@ -251,7 +253,7 @@ def generate_post():
                 for subitem in json_tmpl:
                     tmp += "\n###- " + subitem["question"] + "\n\n"
                     
-                    tmpl = generate_content(f' Write the answer for this question "{subitem["question"]} about {title}".')
+                    tmpl = generate_content(f' Write the answer for this question "{subitem["question"]} about {title}".', customgpt_api_key)
                     
                     counter += 1
                     print(f'{int((counter / count) * 100)}% generated!')
