@@ -17,7 +17,7 @@ CORS(app)
 # CustomGPT API configuration
 load_dotenv()
 # CUSTOMGPT_API_KEY = os.getenv('CUSTOMGPT_API_KEY')
-CUSTOMGPT_API_URL = os.getenv('CUSTOMGPT_API_URL')
+CUSTOMGPT_API_URL = "https://app.customgpt.ai/api/v1/projects/10825/conversations/09baf3be-8139-4756-bf87-5f04d5559e3e/messages?stream=false&lang=en"
 # OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 # stable diffusion configuration
