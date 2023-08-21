@@ -201,9 +201,9 @@ def generate_post():
                     if "H2_SUBHEADING" in tmpl:
                         json_tmpl = json.loads(tmpl)
                         tmp += json_tmpl["H2_SUBHEADING"]
-                        print(f'tmpl is object --------- {json_tmpl["H2_SUBHEADING"]}')
+                        # print(f'tmpl is object --------- {json_tmpl["H2_SUBHEADING"]}')
                     else:
-                        print("Tmpl is string")
+                        # print("Tmpl is string")
                         tmp += tmpl
                 tmp += "\n\n\n"
                 # prepare the prompt for image generation.
