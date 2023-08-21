@@ -271,7 +271,7 @@ def generate_post():
         tmpdata = {
             "content": html_content
         }
-        json_data = json.dumps(tmpdata['content'], indent=4)
+        # json_data = json.dumps(tmpdata['content'], indent=4)
         #for test write the html file
         # with open("index.html", "w") as htm:
         #     htm.write(html_content)
