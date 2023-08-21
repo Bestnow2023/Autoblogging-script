@@ -109,12 +109,19 @@ def generate_content(prompt, api_key):
 
 # post the content to wordpress site.
 def post_to_wordpress(title, content, wordpress_url, featuredimg, username, password):
-    post_data = {
-        'title': title,
-        'content': content,
-        'status': 'publish',
-        "featured_media": featuredimg
-    }
+    if featuredimg == '':
+        post_data = {
+            'title': title,
+            'content': content,
+            'status': 'publish',
+        }
+    else:
+        post_data = {
+            'title': title,
+            'content': content,
+            'status': 'publish',
+            "featured_media": featuredimg
+        }
     
     response = requests.post(f"{wordpress_url}/wp-json/wp/v2/posts", auth=(username, password), json=post_data)
     
@@ -140,7 +147,7 @@ def get_auth_token(username, password, wordpress_url):
         return None
     
 # main function that start from here
-@app.route('/', methods=['POST'])
+@app.route('/create', methods=['POST'])
 def generate_post():
     try:
         # get the data from the post data
@@ -158,7 +165,14 @@ def generate_post():
         password = data['password']
         wordpress_url = data['url']
         dream_api_key = data['dreamstudio_api_key']
+        featuredimg = ""
         customgpt_api_key = data['customgpt_api_key']
+        wordpress = True
+        usedream = True
+        if username == '' or password == '' or wordpress_url == '':
+            wordpress = False
+        if dream_api_key == '':
+            usedream = False
         # prepare for the prompt
         prompt = "write the outline of a blog post about "
         prompt += data['content']
@@ -169,11 +183,13 @@ def generate_post():
         
         content = generate_content(prompt, customgpt_api_key)
         json_content = json.loads(content)
-        count += len(json_content["H2"]) * 2
+        if usedream:
+            count += len(json_content["H2"]) + 1
+        count += len(json_content["H2"])
         for mmk in json_content["H2"]:
             if mmk["title"] != "FAQ":
                 count += len(mmk["H3"])
-        count += 6
+        count += 5
         # print(count)
         h2_with_h3 = []
         for h2_item in json_content["H2"]:
@@ -181,9 +197,10 @@ def generate_post():
             h3_titles = [h3 for h3 in h2_item["H3"]]
             h2_with_h3.append({"H2 Title": h2_title, "H3 Titles": h3_titles})
         title = json_content["H1"]      # title of the blog
-        featuredimg = generateStableDiffusionImage(title, height, width, 30, username, password, wordpress_url, 1, dream_api_key)
-        counter += 1
-        print(f'{int((counter / count) * 100)}% generated!')
+        if not usedream:
+            featuredimg = generateStableDiffusionImage(title, height, width, 30, username, password, wordpress_url, 1, dream_api_key)
+            counter += 1
+            print(f'{int((counter / count) * 100)}% generated!')
         # generate the main content of the blog
         tmp = ""
         for index, item in enumerate(h2_with_h3):
@@ -210,8 +227,9 @@ def generate_post():
                 prompt_img += f' {item["H2 Title"]}'
                 # print(f"-----------------> for debug2 {prompt_img}")
                 # generate the image
-                image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2, dream_api_key)     # The image url.
-                tmp += f'![Alt Text]({image_url})\n\n'      # add the image to the content.
+                if not usedream:
+                    image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2, dream_api_key)     # The image url.
+                    tmp += f'![Alt Text]({image_url})\n\n'      # add the image to the content.
 
                 counter += 1
                 print(f'{int((counter / count) * 100)}% generated!')
@@ -238,11 +256,12 @@ def generate_post():
             else:
                 prompt_img = f'FAQ in {title}'
                 # generate the image
-                image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2, dream_api_key)     # The image url.
-                tmp += f'![Alt Text]({image_url})\n\n'      # add the image to the content.
+                if not usedream:
+                    image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2, dream_api_key)     # The image url.
+                    tmp += f'![Alt Text]({image_url})\n\n'      # add the image to the content.
 
-                counter += 1
-                print(f'{int((counter / count) * 100)}% generated!')
+                    counter += 1
+                    print(f'{int((counter / count) * 100)}% generated!')
 
                 tmpl = generate_content(f'write 5 FAQ questions for a blog post about "{title}". The questions should be for a authoritative comprehensive guide. please give me the output as a JSON block with each question as a element in the JSON array. No further explanation is required. Your response contain ONLY the JSON block and nothing else.', customgpt_api_key)
                 
@@ -278,18 +297,66 @@ def generate_post():
         #     print('Your blog is posted successfully!')
         #     return "DDDDD"
         # post it.
-        post_to_wordpress(title, html_content, wordpress_url, featuredimg, username, password)
+        if wordpress:
+            post_to_wordpress(title, html_content, wordpress_url, featuredimg, username, password)
         for filename in files:
             try:
                 os.remove(filename)
             except OSError as e:
                 print(f"Error deleting file '{filename}': {e}")
         print('Your blog is posted successfully!')
-        return jsonify({'success' : 'Your blog is posted successfully!'})
+        return jsonify({'success' : 'Your blog is posted successfully!', 'content': html_content})
     
     except Exception as e:
         print(str(e))
         return jsonify({'error': str(e)}), 500
+
+@app.route('/delete', methods=['POST'])
+def delete():
+    data = request.get_json()
+    username = data['username']
+    password = data['password']
+    wordpress_url = data['url']
+    post_id = data['post_id']
+    response = requests.delete(f"{wordpress_url}/wp-json/wp/v2/posts/{post_id}", auth=(username, password))
+
+    if response.status_code == 200:
+        return jsonify({"success": "The post was deleted successfully."})
+    else:
+        return jsonify(({'error'}))
+
+@app.route('/update', methods=['POST'])
+def update():
+    data = request.get_json()
+    username = data['username']
+    password = data['password']
+    wordpress_url = data['url']
+    post_id = data['post_id']
+    post_data = data['data']
+    new_data = {'content':post_data}
+    response = requests.put(f"{wordpress_url}/wp-json/wp/v2/posts/{post_id}", auth=(username, password), json=new_data)
+
+    if response.status_code == 200:
+        return jsonify({"success": "The post was deleted successfully."})
+    else:
+        return jsonify(({'error'}))
+
+@app.route('/download', methods=['POST'])
+def download():
+    data = request.get_json()
+    username = data['username']
+    password = data['password']
+    wordpress_url = data['url']
+    post_id = data['post_id']
+    response = requests.get(f"{wordpress_url}/wp-json/wp/v2/posts/{post_id}", auth=(username, password))
+    jsondata = json.loads(response.content)
+
+    print(jsondata['content']['rendered'])
+    if response.status_code == 200:
+        return jsondata['content']['rendered']
+    else:
+        return jsonify({'error'})
+
 
 if __name__ == '__main__':
     print("App started")
