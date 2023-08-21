@@ -167,6 +167,7 @@ def generate_post():
 
         # generate the outline of the blog and sort it.
         print("Thinking...")
+        
         content = generate_content(prompt, customgpt_api_key)
         json_content = json.loads(content)
         count += len(json_content["H2"]) * 2
