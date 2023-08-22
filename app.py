@@ -12,7 +12,6 @@ from waitress import serve
 
 app = Flask(__name__)
 CORS(app)  
-CUSTOMGPT_API_URL = ""
 
 # CustomGPT API configuration
 
@@ -91,7 +90,7 @@ def generate_conversation(customgpt_api_key):
     new_guid = json.loads(response.text)['data']['session_id']
     return f"https://app.customgpt.ai/api/v1/projects/10825/conversations/{new_guid}/messages?stream=false&lang=en"
 
-def generate_content(prompt, api_key):
+def generate_content(CUSTOMGPT_API_URL, prompt, api_key):
     headers = {
         "accept": "application/json",
         'Authorization': f'Bearer {api_key}',
@@ -186,7 +185,7 @@ def generate_post():
         # generate the outline of the blog and sort it.
         print("Thinking...")
         
-        content = generate_content(prompt, customgpt_api_key)
+        content = generate_content(CUSTOMGPT_API_URL, prompt, customgpt_api_key)
         json_content = json.loads(content)
         if usedream:
             count += len(json_content["H2"]) + 1
@@ -213,7 +212,7 @@ def generate_post():
             # generate the content for subtitle.
             # print(f'--------------------------> debug1 {item}')
             if item["H2 Title"] != "FAQ":
-                tmpl = generate_content(f'In a blog post about "{title}" write an introduction for a H2 sub-section titled "{item["H2 Title"]}" in about 100 words.Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include a conclusion or explanation. Get straight to the point about "{item["H2 Title"]}". If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
+                tmpl = generate_content(CUSTOMGPT_API_URL, f'In a blog post about "{title}" write an introduction for a H2 sub-section titled "{item["H2 Title"]}" in about 100 words.Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include a conclusion or explanation. Get straight to the point about "{item["H2 Title"]}". If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
                 
                 # print(f'----------------------------->debug1.5 {tmpl}')
                 counter += 1
@@ -243,14 +242,14 @@ def generate_post():
                 for subitem in item["H3 Titles"]:
                     if isinstance(subitem, str):
                         tmp += "\n###- " + subitem + "\n\n"
-                        tmpl = generate_content(f' In a blog post about "{subitem}" I have a H2 sub-section "{item["H2 Title"]}". please write a H3 sub-section "{subitem}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
+                        tmpl = generate_content(CUSTOMGPT_API_URL, f' In a blog post about "{subitem}" I have a H2 sub-section "{item["H2 Title"]}". please write a H3 sub-section "{subitem}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
                         
                         counter += 1
                         print(f'{int((counter / count) * 100)}% generated!')
 
                     else:
                         tmp += "\n###- " + subitem["title"] + "\n\n"
-                        tmpl = generate_content(f' In a blog post about "{subitem["title"]}" I have a H2 sub-section "{item["H2 Title"]}". please write a H3 sub-section "{subitem["title"]}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
+                        tmpl = generate_content(CUSTOMGPT_API_URL, f' In a blog post about "{subitem["title"]}" I have a H2 sub-section "{item["H2 Title"]}". please write a H3 sub-section "{subitem["title"]}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
                         
                         counter += 1
                         print(f'{int((counter / count) * 100)}% generated!')
@@ -268,7 +267,7 @@ def generate_post():
                     counter += 1
                     print(f'{int((counter / count) * 100)}% generated!')
 
-                tmpl = generate_content(f'write 5 FAQ questions for a blog post about "{title}". The questions should be for a authoritative comprehensive guide. please give me the output as a JSON block with each question as a element in the JSON array. No further explanation is required. Your response contain ONLY the JSON block and nothing else.', customgpt_api_key)
+                tmpl = generate_content(CUSTOMGPT_API_URL, f'write 5 FAQ questions for a blog post about "{title}". The questions should be for a authoritative comprehensive guide. please give me the output as a JSON block with each question as a element in the JSON array. No further explanation is required. Your response contain ONLY the JSON block and nothing else.', customgpt_api_key)
                 
                 counter += 1
                 print(f'{int((counter / count) * 100)}% generated!')
@@ -277,7 +276,7 @@ def generate_post():
                 for subitem in json_tmpl:
                     tmp += "\n###- " + subitem["question"] + "\n\n"
                     
-                    tmpl = generate_content(f' Write the answer for this question "{subitem["question"]} about {title}".', customgpt_api_key)
+                    tmpl = generate_content(CUSTOMGPT_API_URL, f' Write the answer for this question "{subitem["question"]} about {title}".', customgpt_api_key)
                     
                     counter += 1
                     print(f'{int((counter / count) * 100)}% generated!')
