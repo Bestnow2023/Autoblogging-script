@@ -16,6 +16,7 @@ CORS(app)
 # CustomGPT API configuration
 load_dotenv()
 # CUSTOMGPT_API_KEY = os.getenv('CUSTOMGPT_API_KEY')
+
 CUSTOMGPT_API_URL = "https://app.customgpt.ai/api/v1/projects/10825/conversations/09baf3be-8139-4756-bf87-5f04d5559e3e/messages?stream=false&lang=en"
 # OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
@@ -209,7 +210,7 @@ def generate_post():
             # generate the content for subtitle.
             # print(f'--------------------------> debug1 {item}')
             if item["H2 Title"] != "FAQ":
-                tmpl = generate_content(f'In a blog post about {title} write an introduction for a H2 sub-section titled {item["H2 Title"]} in about 100 words.Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include a conclusion or explanation. Get straight to the point about {item["H2 Title"]}. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
+                tmpl = generate_content(f'In a blog post about "{title}" write an introduction for a H2 sub-section titled "{item["H2 Title"]}" in about 100 words.Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include a conclusion or explanation. Get straight to the point about "{item["H2 Title"]}". If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
                 
                 # print(f'----------------------------->debug1.5 {tmpl}')
                 counter += 1
@@ -225,7 +226,7 @@ def generate_post():
                 tmp += "\n\n\n"
                 # prepare the prompt for image generation.
                 prompt_img = "Fine art photography. An ultra high resolution photo. "        # prompt for the image = title + sub-title
-                prompt_img += f' {item["H2 Title"]}. Canon EOS R6.'
+                prompt_img += f' "{item["H2 Title"]}". Canon EOS R6.'
                 # print(f"-----------------> for debug2 {prompt_img}")
                 # generate the image
                 if usedream:
@@ -239,19 +240,19 @@ def generate_post():
                 for subitem in item["H3 Titles"]:
                     if isinstance(subitem, str):
                         tmp += "\n###- " + subitem + "\n\n"
-                        tmpl = generate_content(f' In a blog post about "{subitem}" I have a H2 sub-section {item["H2 Title"]}. please write a H3 sub-section "{subitem}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
+                        tmpl = generate_content(f' In a blog post about "{subitem}" I have a H2 sub-section "{item["H2 Title"]}". please write a H3 sub-section "{subitem}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
                         
                         counter += 1
                         print(f'{int((counter / count) * 100)}% generated!')
 
                     else:
                         tmp += "\n###- " + subitem["title"] + "\n\n"
-                        tmpl = generate_content(f' In a blog post about "{subitem["title"]}" I have a H2 sub-section {item["H2 Title"]}. please write a H3 sub-section "{subitem["title"]}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
+                        tmpl = generate_content(f' In a blog post about "{subitem["title"]}" I have a H2 sub-section "{item["H2 Title"]}". please write a H3 sub-section "{subitem["title"]}" in upto 200 words. Write in the first person and incorporate experiences from the CONTEXT. Please do NOT include an introduction, conclusion or explanation. Get straight to the point. If you are able to include quotes and expert points of view gleaned from the CONTEXT, that is preferred.', customgpt_api_key)
                         
                         counter += 1
                         print(f'{int((counter / count) * 100)}% generated!')
 
-                    if tmpl != "I'm sorry, but I can't assist with that.":          # this is for the skip when "I am sorry, but I can't assist with that."
+                    if "sorry" not in tmpl.lower():          # this is for the skip when "I am sorry, but I can't assist with that."
                         tmp += tmpl
                     tmp += "\n\n"
             else:
@@ -278,7 +279,7 @@ def generate_post():
                     counter += 1
                     print(f'{int((counter / count) * 100)}% generated!')
 
-                    if tmpl != "I'm sorry, but I can't provide the help you are looking for.":          # this is for the skip when "I am sorry, but I can't assist with that."
+                    if "sorry" not in tmpl.lower():        # this is for the skip when "I am sorry, but I can't assist with that."
                         tmp += tmpl
                     tmp += "\n\n"
                 tmp += "\n\n\n"
