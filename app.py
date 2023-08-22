@@ -173,6 +173,7 @@ def generate_post():
             wordpress = False
         if dream_api_key == '':
             usedream = False
+        print(data['dreamstudio_api_key'])
         # prepare for the prompt
         prompt = "write the outline of a blog post about "
         prompt += data['content']
@@ -197,8 +198,8 @@ def generate_post():
             h3_titles = [h3 for h3 in h2_item["H3"]]
             h2_with_h3.append({"H2 Title": h2_title, "H3 Titles": h3_titles})
         title = json_content["H1"]      # title of the blog
-        if not usedream:
-            featuredimg = generateStableDiffusionImage(title, height, width, 30, username, password, wordpress_url, 1, dream_api_key)
+        if usedream:
+            featuredimg = generateStableDiffusionImage(f'Fine art photography. An ultra high resolution photo. {title}. Canon EOS R6.', height, width, 30, username, password, wordpress_url, 1, dream_api_key)
             counter += 1
             print(f'{int((counter / count) * 100)}% generated!')
         # generate the main content of the blog
@@ -223,12 +224,12 @@ def generate_post():
                         tmp += tmpl
                 tmp += "\n\n\n"
                 # prepare the prompt for image generation.
-                prompt_img = json_content["H1"]         # prompt for the image = title + sub-title
-                prompt_img += f' {item["H2 Title"]}'
+                prompt_img = "Fine art photography. An ultra high resolution photo. "        # prompt for the image = title + sub-title
+                prompt_img += f' {item["H2 Title"]}. Canon EOS R6.'
                 # print(f"-----------------> for debug2 {prompt_img}")
                 # generate the image
-                if not usedream:
-                    image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2, dream_api_key)     # The image url.
+                if usedream:
+                    image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2, dream_api_key)     # The image url. 
                     tmp += f'![Alt Text]({image_url})\n\n'      # add the image to the content.
 
                 counter += 1
@@ -256,7 +257,7 @@ def generate_post():
             else:
                 prompt_img = f'FAQ in {title}'
                 # generate the image
-                if not usedream:
+                if usedream:
                     image_url = generateStableDiffusionImage(prompt_img, height, width, 30, username, password, wordpress_url, 2, dream_api_key)     # The image url.
                     tmp += f'![Alt Text]({image_url})\n\n'      # add the image to the content.
 
