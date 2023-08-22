@@ -12,26 +12,12 @@ from waitress import serve
 
 app = Flask(__name__)
 CORS(app)  
+CUSTOMGPT_API_URL = ""
 
 # CustomGPT API configuration
-load_dotenv()
-# CUSTOMGPT_API_KEY = os.getenv('CUSTOMGPT_API_KEY')
 
-CUSTOMGPT_API_URL = "https://app.customgpt.ai/api/v1/projects/10825/conversations/09baf3be-8139-4756-bf87-5f04d5559e3e/messages?stream=false&lang=en"
-# OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-
-# stable diffusion configuration
 api_host = 'https://api.stability.ai'
-# api_key = os.getenv('DREAMSTUDIO_API_KEY')
 engine_id = 'stable-diffusion-xl-beta-v2-2-2'
-
-# def getModelList():
-    # url = f"{api_host}/v1/engines/list"
-    # response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
-
-    # if response.status_code == 200:
-    #     payload = response.json()
-        # print(payload)
 
 height = 512
 width = 768
@@ -90,6 +76,20 @@ def generateStableDiffusionImage(prompt, height, width, steps, username, passwor
                     exit("image upload failed")
 
 # main part for content and title generation.
+def generate_conversation(customgpt_api_key):
+    url = "https://app.customgpt.ai/api/v1/projects/10825/conversations"
+
+    payload = { "name": "blogpost" }
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "authorization": f"Bearer {customgpt_api_key}"
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+
+    new_guid = json.loads(response.text)['data']['session_id']
+    return f"https://app.customgpt.ai/api/v1/projects/10825/conversations/{new_guid}/messages?stream=false&lang=en"
 
 def generate_content(prompt, api_key):
     headers = {
@@ -170,6 +170,9 @@ def generate_post():
         customgpt_api_key = data['customgpt_api_key']
         wordpress = True
         usedream = True
+        CUSTOMGPT_API_URL = generate_conversation(customgpt_api_key)
+        print(CUSTOMGPT_API_URL)
+        # return jsonify({"success":"success"})
         if username == '' or password == '' or wordpress_url == '':
             wordpress = False
         if dream_api_key == '':
