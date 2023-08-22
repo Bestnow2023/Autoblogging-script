@@ -180,7 +180,7 @@ def generate_post():
         print(data['dreamstudio_api_key'])
         # prepare for the prompt
         prompt = "write the outline of a blog post about "
-        prompt += f'"{data['content']}"'
+        prompt += f'"{data["content"]}"'
         prompt += ". This should be like a authoritative comprehensive guide. Should include a FAQ and Conclusion at the end. And give me the output as a JSON block with nested H2 and H3 tags indicating the sub-sections. No further explanation is required.  Your response contain ONLY the JSON block and nothing else. "
 
         # generate the outline of the blog and sort it.
